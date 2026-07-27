@@ -1,0 +1,57 @@
+# AI Gesture Mouse Pro — dependencies
+#
+# Install:  pip install -r requirements.txt
+#
+# Lower bounds are the oldest versions the code is written against; upper
+# bounds are only pinned where a major release is known to break the API.
+# Verified against the versions listed in the comments on 2026-07-28.
+
+# --- Core: computer vision and numerics ------------------------------------
+# OpenCV 5.x removed the bundled Haar cascade XML files, so face detection
+# falls back to MediaPipe. Both 4.x and 5.x are supported.
+opencv-python>=4.8,<6            # verified 5.0.0.93
+numpy>=1.24,<3                   # verified 2.5.1
+
+# MediaPipe exposes two incompatible APIs depending on the build: the legacy
+# Solutions API and the newer Tasks API. detector.py supports both and picks
+# whichever is present, so any 0.10.x release works.
+mediapipe>=0.10.9                # verified 0.10.35
+
+# --- Interface --------------------------------------------------------------
+customtkinter>=5.2               # verified 6.0.0
+pillow>=10.0                     # verified 12.3.0
+
+# --- Input and display control ---------------------------------------------
+# pynput is the primary mouse/keyboard backend; pyautogui is the fallback and
+# supplies screen capture for screenshots and recording.
+pynput>=1.7                      # verified 1.8.2
+pyautogui>=0.9.53                # verified 0.9.54
+screeninfo>=0.8                  # verified 0.8.1
+
+# --- System metrics ---------------------------------------------------------
+psutil>=5.9                      # verified 7.2.2
+
+# --- Optional ---------------------------------------------------------------
+# Everything below degrades gracefully: the relevant feature reports itself as
+# unavailable rather than the application failing to start.
+
+# Display brightness on Windows and most Linux laptops. macOS has no backend
+# here; install the `brightness` CLI instead (brew install brightness).
+screen-brightness-control>=0.16 ; sys_platform != "darwin"
+
+# System volume on Windows (Core Audio). macOS uses osascript and Linux uses
+# pactl, both of which ship with the OS.
+pycaw>=20230407 ; sys_platform == "win32"
+comtypes>=1.2 ; sys_platform == "win32"
+
+# Voice commands. Also needs PortAudio: `brew install portaudio` on macOS or
+# `apt install python3-pyaudio portaudio19-dev` on Debian/Ubuntu.
+# Uncomment both to enable Settings -> Features -> Voice Commands.
+# SpeechRecognition>=3.10
+# PyAudio>=0.2.13
+
+# --- Deliberately not required ----------------------------------------------
+# scipy      - the $1 recogniser and all filtering are implemented directly on
+#              NumPy, so scipy would add ~90 MB for nothing.
+# keyboard   - needs root on Linux and does not support macOS. Global hotkeys
+#              use pynput instead, which is already required above.
