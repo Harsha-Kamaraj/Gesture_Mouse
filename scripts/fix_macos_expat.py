@@ -34,6 +34,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -49,6 +50,33 @@ BREW_CANDIDATES = (
     "/opt/homebrew/opt/expat/lib/libexpat.1.dylib",   # Apple Silicon
     "/usr/local/opt/expat/lib/libexpat.1.dylib",      # Intel
 )
+
+
+def _clear_hidden_flag(path: Path) -> None:
+    """Clear macOS's ``UF_HIDDEN`` flag on ``path``.
+
+    This is not cosmetic.  ``site.py`` explicitly skips any ``.pth`` file
+    carrying ``UF_HIDDEN``::
+
+        if ((getattr(st, 'st_flags', 0) & stat.UF_HIDDEN) or ...):
+            _trace(f"Skipping hidden .pth file: {fullname!r}")
+            return
+
+    A hidden ``.pth`` is therefore silently ignored — no error, no warning —
+    and the repair appears to have worked while doing nothing at all.  Files
+    can pick the flag up from an inherited attribute or a copy from a flagged
+    source, so it is cleared explicitly rather than assumed absent.
+    """
+    if sys.platform != "darwin":
+        return
+    try:
+        import stat as stat_module
+
+        flags = os.lstat(path).st_flags  # type: ignore[attr-defined]
+        if flags & stat_module.UF_HIDDEN:
+            os.chflags(path, flags & ~stat_module.UF_HIDDEN)  # type: ignore[attr-defined]
+    except (OSError, AttributeError):
+        pass
 
 
 def expat_works() -> bool:
@@ -156,18 +184,17 @@ def apply(site_packages: Path) -> int:
     # A .pth file runs at interpreter startup, which is early enough to shadow
     # the stdlib copy before anything imports pyexpat.
     #
-    # Note ``__file__`` is NOT defined while a .pth line executes, so the
-    # directory has to be located by scanning the paths site has already set
-    # up rather than derived from this file's location.
+    # The absolute path is baked in rather than discovered at runtime, because
+    # ``__file__`` is not defined while a .pth line executes and a virtualenv
+    # is not relocatable anyway.
     pth = site_packages / PTH_NAME
     pth.write_text(
         "import sys, os; "
-        f"_n = {FIX_DIR_NAME!r}; "
-        "_c = [os.path.join(d, _n) for d in list(sys.path) "
-        "if os.path.isdir(os.path.join(d, _n))]; "
-        "_c and sys.path.insert(0, _c[0])\n",
+        f"_p = {str(fix_dir)!r}; "
+        "os.path.isdir(_p) and sys.path.insert(0, _p)\n",
         encoding="utf-8",
     )
+    _clear_hidden_flag(pth)
 
     if expat_works():
         print("\nSuccess — pyexpat now loads correctly.")
