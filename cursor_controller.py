@@ -24,7 +24,6 @@ of which are actively harmful when driving the cursor at 60 Hz.
 from __future__ import annotations
 
 import threading
-import time
 from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
 

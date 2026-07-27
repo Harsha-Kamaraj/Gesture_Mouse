@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Deque, List, Optional, Sequence, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 

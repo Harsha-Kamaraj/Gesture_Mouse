@@ -95,7 +95,7 @@ works in a demo and falls apart in use. Here is what the difference actually con
 <details open>
 <summary><b>Application</b></summary>
 
-- Seven-view desktop interface: Live, Dashboard, Gestures, Performance, Profiles, History, Settings
+- Eight-view desktop interface: Live, Dashboard, Gestures, Performance, Profiles, History, Logs, Settings
 - Five themes plus a high-contrast accessibility variant
 - Calibration wizard that measures *your* hand and derives settings
 - Five profile presets (Default, Gaming, Office, Presentation, Accessibility)
@@ -103,6 +103,7 @@ works in a demo and falls apart in use. Here is what the difference actually con
 - Air presentation mode with four laser-pointer styles
 - Gesture history with CSV export, analytics and a spatial heatmap
 - Real-time performance monitoring with p50/p95/p99 latency
+- Live log viewer with level filtering, fed from an in-memory ring buffer
 - Optional voice commands and presence-based auto-lock
 - Single-file plugin system for user-defined actions
 
@@ -568,7 +569,7 @@ gesture-mouse-pro/
 ├── calibration.py          Measurement wizard
 ├── gesture_recorder.py     Custom gesture capture + library
 │
-├── ui.py                   Main window, seven views
+├── ui.py                   Main window, eight views
 ├── dashboard.py            Canvas widgets (tiles, sparklines, gauges)
 ├── overlay.py              Camera HUD renderer
 ├── notifications.py        Toast system

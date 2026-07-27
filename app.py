@@ -29,14 +29,13 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
 import compat  # noqa: F401  # must precede any customtkinter import
 from actions import ActionContext, ActionRegistry, MacroRecorder
-from calibration import CalibrationWizard, Stage, apply_calibration
+from calibration import CalibrationWizard, apply_calibration
 from config import (
     APP_NAME, APP_VERSION, AppConfig, PLATFORM_NAME, ensure_directories,
 )

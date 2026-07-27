@@ -11,8 +11,7 @@ dashboards flicker and leak; these mutate existing canvas items in place.
 
 from __future__ import annotations
 
-import math
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from logger import get_logger
 from themes import Theme

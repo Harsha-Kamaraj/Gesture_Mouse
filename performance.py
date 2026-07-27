@@ -16,7 +16,7 @@ import os
 import platform
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from logger import get_logger

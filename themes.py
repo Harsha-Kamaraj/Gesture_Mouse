@@ -12,9 +12,8 @@ their own without editing Python.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from dataclasses import asdict, dataclass
+from typing import Dict, List, Tuple
 
 from config import THEMES_DIR
 from logger import get_logger

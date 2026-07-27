@@ -1,7 +1,7 @@
 """Main application window.
 
-A sidebar-plus-content shell hosting seven views: Live camera, Dashboard,
-Gesture Library, Performance, Profiles, History and Settings.
+A sidebar-plus-content shell hosting eight views: Live camera, Dashboard,
+Gesture Library, Performance, Profiles, History, Logs and Settings.
 
 Design notes
 ------------
@@ -11,7 +11,7 @@ that interface.  Keeping the boundary strict is what allows the whole
 recognition stack to run headless (``app.py --headless``) with no UI at all,
 and it stops view code from quietly becoming the place business rules live.
 
-Views are built lazily on first navigation.  Constructing all seven up front
+Views are built lazily on first navigation.  Constructing all eight up front
 costs noticeable startup time for screens the user may never open.
 """
 
@@ -19,16 +19,14 @@ from __future__ import annotations
 
 import compat  # noqa: F401  # must precede customtkinter; see module docstring
 
-import threading
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import customtkinter as ctk
 
 from config import APP_NAME, APP_VERSION
-from dashboard import BarChart, DashboardPanel, Gauge, HeatmapWidget, Sparkline, StatTile
+from dashboard import DashboardPanel, Gauge, Sparkline
 from logger import get_logger, ring_handler
 from notifications import ToastManager
 from themes import Theme, ThemeManager
@@ -88,8 +86,18 @@ NAV_ITEMS: List[Tuple[str, str, str]] = [
     ("performance", "Performance", "◱"),
     ("profiles", "Profiles", "◍"),
     ("history", "History", "≡"),
+    ("logs", "Logs", "◧"),
     ("settings", "Settings", "⚙"),
 ]
+
+#: Log level -> theme token, used to colour rows in the Logs view.
+_LOG_LEVEL_TOKENS: Dict[str, str] = {
+    "DEBUG": "text_muted",
+    "INFO": "text",
+    "WARNING": "warning",
+    "ERROR": "error",
+    "CRITICAL": "error",
+}
 
 
 class MainWindow(ctk.CTk):
@@ -120,6 +128,8 @@ class MainWindow(ctk.CTk):
         self._photo_ref: Optional[object] = None
         self._running = True
         self._widgets: Dict[str, object] = {}
+        self._log_filter = "INFO"
+        self._log_paused = False
 
         self.toasts = ToastManager(self, self.theme)
 
@@ -457,6 +467,127 @@ class MainWindow(ctk.CTk):
         self._widgets["history_list"].pack(fill="both", expand=True, pady=(4, 0))
         return frame
 
+    def _build_logs(self) -> ctk.CTkFrame:
+        """Live log viewer fed by the in-memory ring buffer.
+
+        Reads from :data:`logger.ring_handler` rather than tailing the log
+        file, so opening this view costs no disk I/O and shows records the
+        instant they are emitted — including ones from the pipeline thread.
+        """
+        theme = self.theme
+        frame = ctk.CTkFrame(self.view_container, fg_color="transparent")
+
+        toolbar = ctk.CTkFrame(frame, fg_color="transparent")
+        toolbar.pack(fill="x", pady=(0, 12))
+
+        self._log_paused = False
+
+        def toggle_pause() -> None:
+            """Freeze or resume the live tail."""
+            self._log_paused = not self._log_paused
+            pause_button.configure(
+                text="Resume" if self._log_paused else "Pause",
+                fg_color=theme.warning if self._log_paused else theme.surface_alt,
+                text_color="#FFFFFF" if self._log_paused else theme.text,
+            )
+
+        pause_button = ctk.CTkButton(
+            toolbar, text="Pause", height=36, width=100, font=_font(theme, 12),
+            fg_color=theme.surface_alt, hover_color=theme.border,
+            text_color=theme.text, corner_radius=theme.corner_radius - 4,
+            command=toggle_pause,
+        )
+        pause_button.pack(side="left")
+
+        ctk.CTkButton(
+            toolbar, text="Clear", height=36, width=100, font=_font(theme, 12),
+            fg_color=theme.surface_alt, hover_color=theme.border,
+            text_color=theme.text, corner_radius=theme.corner_radius - 4,
+            command=self._clear_logs,
+        ).pack(side="left", padx=10)
+
+        level_menu = ctk.CTkOptionMenu(
+            toolbar, values=["ALL", "DEBUG", "INFO", "WARNING", "ERROR"],
+            width=130, height=36, fg_color=theme.surface_alt,
+            button_color=theme.accent, font=_font(theme, 12),
+            command=self._set_log_level_filter,
+        )
+        level_menu.set("INFO")
+        level_menu.pack(side="left")
+        self._log_filter = "INFO"
+
+        ctk.CTkLabel(
+            toolbar, text=f"Log file: logs/{APP_NAME.lower().replace(' ', '-')}.log",
+            font=_font(theme, 11), text_color=theme.text_muted,
+        ).pack(side="right")
+
+        self._widgets["log_box"] = ctk.CTkTextbox(
+            frame, fg_color=theme.surface, corner_radius=theme.corner_radius,
+            border_width=1, border_color=theme.border,
+            font=(theme.font_family_mono, 11), text_color=theme.text,
+            wrap="none",
+        )
+        self._widgets["log_box"].pack(fill="both", expand=True)
+
+        # Colour tags, one per level.
+        box = self._widgets["log_box"]
+        for level, token in _LOG_LEVEL_TOKENS.items():
+            try:
+                box.tag_config(level, foreground=theme.token(token))  # type: ignore[attr-defined]
+            except Exception:
+                pass
+
+        self._render_log_snapshot()
+        return frame
+
+    def _log_passes_filter(self, line: str) -> bool:
+        """Whether a formatted record clears the level filter."""
+        if self._log_filter == "ALL":
+            return True
+        order = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        try:
+            minimum = order.index(self._log_filter)
+        except ValueError:
+            return True
+        for index, level in enumerate(order):
+            if f"| {level:<8}|" in line or f"| {level} " in line:
+                return index >= minimum
+        return True
+
+    @staticmethod
+    def _level_of(line: str) -> str:
+        """Extract the level name from a formatted record."""
+        for level in ("CRITICAL", "ERROR", "WARNING", "DEBUG", "INFO"):
+            if level in line:
+                return level
+        return "INFO"
+
+    def _render_log_snapshot(self) -> None:
+        """Fill the log box from the ring buffer."""
+        box = self._widgets.get("log_box")
+        if box is None:
+            return
+        try:
+            box.configure(state="normal")            # type: ignore[attr-defined]
+            box.delete("1.0", "end")                 # type: ignore[attr-defined]
+            for line in ring_handler.snapshot():
+                if self._log_passes_filter(line):
+                    box.insert("end", line + "\n", self._level_of(line))  # type: ignore[attr-defined]
+            box.see("end")                           # type: ignore[attr-defined]
+            box.configure(state="disabled")          # type: ignore[attr-defined]
+        except Exception as exc:
+            log.debug("log render failed: %s", exc)
+
+    def _set_log_level_filter(self, level: str) -> None:
+        """Change the minimum displayed level."""
+        self._log_filter = level
+        self._render_log_snapshot()
+
+    def _clear_logs(self) -> None:
+        """Empty the in-memory buffer and the view."""
+        ring_handler.records.clear()
+        self._render_log_snapshot()
+
     def _build_settings(self) -> ctk.CTkFrame:
         """Settings across camera, cursor, gestures, appearance and features."""
         theme = self.theme
@@ -792,6 +923,8 @@ class MainWindow(ctk.CTk):
                 self._refresh_performance()
             elif self._active_view == "history":
                 self.refresh_history_list()
+            elif self._active_view == "logs" and not self._log_paused:
+                self._render_log_snapshot()
         except Exception as exc:
             log.debug("refresh failed: %s", exc)
 

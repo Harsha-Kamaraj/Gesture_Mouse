@@ -20,7 +20,7 @@ import subprocess
 import threading
 import wave
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence
 
 from config import IS_LINUX, IS_MACOS, IS_WINDOWS, SOUNDS_DIR
 from logger import get_logger

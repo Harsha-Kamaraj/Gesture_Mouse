@@ -203,7 +203,6 @@ def test_swipe_directions() -> None:
 
 def test_circle_is_not_a_swipe() -> None:
     """A circular path displaces little relative to its length."""
-    rng = random.Random(1)
     circle = [(0.5 + 0.2 * math.cos(t / 10), 0.5 + 0.2 * math.sin(t / 10))
               for t in range(63)]
     assert detect_swipe(circle, duration=0.6) is None

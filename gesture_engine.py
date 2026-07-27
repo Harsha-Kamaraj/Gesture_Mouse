@@ -33,14 +33,12 @@ import numpy as np
 
 from config import GestureConfig
 from detector import (
-    FINGER_NAMES, INDEX_DIP, INDEX_MCP, INDEX_PIP, INDEX_TIP, MIDDLE_MCP,
+    FINGER_NAMES, INDEX_MCP, INDEX_PIP, INDEX_TIP, MIDDLE_MCP,
     MIDDLE_PIP, MIDDLE_TIP, PINKY_MCP, PINKY_PIP, PINKY_TIP, RING_MCP,
-    RING_PIP, RING_TIP, THUMB_CMC, THUMB_IP, THUMB_MCP, THUMB_TIP, WRIST,
+    RING_PIP, RING_TIP, THUMB_IP, THUMB_MCP, THUMB_TIP, WRIST,
     HandLandmarks,
 )
-from dynamic_gestures import (
-    DollarOneRecognizer, MotionTrail, SwipeResult, detect_swipe,
-)
+from dynamic_gestures import DollarOneRecognizer, MotionTrail, detect_swipe
 from logger import get_logger
 from utils import (
     Cooldown, angle_between, clamp, distance_2d, smoothstep,
