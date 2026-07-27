@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime artefacts
+logs/*.log*
+data/
+recordings/*.mp4
+recordings/*.avi
+screenshots/*.png
+screenshots/*.jpg
+
+# Downloaded ML models (fetched on first run)
+assets/models/*.task
+
+# OS noise
+.DS_Store
+Thumbs.db
