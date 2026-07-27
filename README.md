@@ -25,13 +25,22 @@ It is built as a real application rather than a demo script: a layered architect
 a testable core, graceful degradation when optional dependencies are missing, and a test
 suite that verifies the recognition pipeline end-to-end **without a camera**.
 
-> **Demo**
->
-> <!-- Record with: python app.py, then screen-record the Live view -->
-> ![Demo](docs/media/demo.gif)
->
-> *Replace `docs/media/demo.gif` with your own recording — the app can record itself
-> via the 🤙 gesture or `Ctrl+Alt+S`.*
+### The live view
+
+Real output from the overlay renderer — status panel, active-region guide, hand skeleton
+and confidence bar with the accept threshold marked.
+
+| Navigate · Midnight theme | Volume mode · Cyberpunk theme |
+|---|---|
+| ![Navigate mode](docs/media/overlay-dark.png) | ![Volume mode](docs/media/overlay-cyberpunk.png) |
+
+On the right: holding 🤘 switches to **Volume** mode, the banner names the active mode, and
+thumb↔index distance drives the level meter. The dashed rectangle is the *active region* —
+the part of the frame mapped to your screen, so you never have to reach the frame edges.
+
+> **Recording your own demo:** run `python app.py` and screen-record the Live view, or use
+> the app's own recorder — 🤙 held for a second, or `Ctrl+Alt+S`. Drop the result in
+> `docs/media/` and link it here.
 
 ---
 
