@@ -191,10 +191,14 @@ def apply(site_packages: Path) -> int:
     pth.write_text(
         "import sys, os; "
         f"_p = {str(fix_dir)!r}; "
-        "os.path.isdir(_p) and sys.path.insert(0, _p)\n",
+        "os.path.isdir(_p) and _p not in sys.path and sys.path.insert(0, _p)\n",
         encoding="utf-8",
     )
-    _clear_hidden_flag(pth)
+
+    # Clear the flag on the directory as well as the file. shutil.copy2 copies
+    # metadata, and anything under a virtualenv can pick UF_HIDDEN up.
+    for path in (pth, fix_dir, target):
+        _clear_hidden_flag(path)
 
     if expat_works():
         print("\nSuccess — pyexpat now loads correctly.")

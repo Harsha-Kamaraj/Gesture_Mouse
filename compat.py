@@ -22,6 +22,7 @@ no-op everywhere else.
 
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
 import sys
@@ -160,6 +161,44 @@ This Python installation has a broken 'pyexpat' extension.
 """
 
 
+def activate_expat_fix() -> bool:
+    """Put a repaired ``pyexpat`` on ``sys.path`` if one has been built.
+
+    :mod:`scripts.fix_macos_expat` installs a corrected extension into
+    ``site-packages/_expat_fix/`` plus a ``.pth`` file that adds that directory
+    at interpreter startup.  The ``.pth`` route is fragile in one specific way:
+    ``site.py`` silently skips any ``.pth`` carrying macOS's ``UF_HIDDEN``
+    flag, and files under a virtualenv can acquire that flag without the user
+    doing anything.  When that happens the repair looks installed but has no
+    effect.
+
+    Since this module is imported before anything else in the application, it
+    can simply do the job itself.  This is belt-and-braces: when the ``.pth``
+    works, this is a no-op.
+
+    Returns:
+        True if a repaired extension was found and activated here.
+    """
+    if sys.platform != "darwin" or not _pyexpat_is_broken():
+        return False
+
+    import sysconfig
+
+    purelib = sysconfig.get_paths().get("purelib")
+    if not purelib:
+        return False
+
+    fix_dir = os.path.join(purelib, "_expat_fix")
+    if not os.path.isdir(fix_dir):
+        return False
+
+    if fix_dir not in sys.path:
+        sys.path.insert(0, fix_dir)
+
+    # Only report success if the extension now actually loads.
+    return not _pyexpat_is_broken()
+
+
 def check_pyexpat(raise_on_error: bool = False) -> bool:
     """Report whether XML parsing works in this interpreter.
 
@@ -186,10 +225,16 @@ def check_pyexpat(raise_on_error: bool = False) -> bool:
 
 
 def apply_all() -> None:
-    """Apply every shim.  Idempotent and safe to call repeatedly."""
+    """Apply every shim.  Idempotent and safe to call repeatedly.
+
+    Order matters: a repaired expat has to be on ``sys.path`` before the macOS
+    version lookup runs, because that lookup parses a plist and is therefore
+    one of the things a broken expat breaks.
+    """
     global _applied
     if _applied:
         return
+    activate_expat_fix()
     patch_macos_version()
     _applied = True
 
