@@ -25,3 +25,6 @@ Thumbs.db
 
 # Downloaded ML models
 assets/models/*.tflite
+
+# Seeded at first run and mutated as the user changes settings
+profiles/*.json
