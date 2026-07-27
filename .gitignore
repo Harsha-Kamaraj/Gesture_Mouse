@@ -22,3 +22,6 @@ assets/models/*.task
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Downloaded ML models
+assets/models/*.tflite
