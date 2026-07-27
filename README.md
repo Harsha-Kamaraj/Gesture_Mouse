@@ -110,7 +110,8 @@ works in a demo and falls apart in use. Here is what the difference actually con
 - Five profile presets (Default, Gaming, Office, Presentation, Accessibility)
 - Virtual whiteboard with vector strokes, undo/redo and export
 - Air presentation mode with four laser-pointer styles
-- Gesture history with CSV export, analytics and a spatial heatmap
+- Gesture history with CSV export, a spatial heatmap, and per-gesture accuracy
+  charts that show at a glance which gesture needs retuning
 - Real-time performance monitoring with p50/p95/p99 latency
 - Live log viewer with level filtering, fed from an in-memory ring buffer
 - Optional voice commands and presence-based auto-lock

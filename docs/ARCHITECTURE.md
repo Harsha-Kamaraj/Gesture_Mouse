@@ -356,3 +356,21 @@ Levers when frames are tight, in order of impact:
 
 Watch **p95/p99** rather than mean frame time on the Performance view. A 60 FPS
 average with a 90 ms p99 feels broken to the user, and only the tail shows it.
+
+### A note on CustomTkinter in hot paths
+
+CustomTkinter widgets draw themselves onto a canvas, which makes them
+comparatively expensive both to construct and to `configure`. That is fine for
+controls, and wrong for list rows that update several times a second.
+
+Two measured consequences shaped the History view:
+
+* `CTkScrollableFrame` redraws its scrollbar whenever the child count changes.
+  Rebuilding 40 rows cost **1.2 s** in that redraw against 0.06 s for the rows
+  themselves. Allocating rows once and rewriting their text avoids it entirely.
+* `CTkLabel` benchmarked **25x** slower than `tk.Label` to create, and redraws
+  on every `configure`. Flat static text gains nothing from it.
+
+Result: 4.85 s → 0.22 s for the first build, 0.30 s → 0.02 s per update. The
+general rule — reach for plain Tk widgets when the widget is static text in a
+list that refreshes, and keep the child count of a scrollable frame stable.
