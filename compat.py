@@ -68,13 +68,32 @@ def _derive_from_darwin() -> Optional[str]:
 def patch_macos_version() -> bool:
     """Repair ``platform.mac_ver`` when it reports an empty version.
 
+    ``platform.mac_ver()`` reads ``SystemVersion.plist`` through ``plistlib``,
+    which needs expat.  So on a Python with a broken ``pyexpat`` the parse
+    fails silently and the function returns ``('', ('', '', ''), '')``.
+
+    ``darkdetect`` then does ``int(version.split('.')[0])`` on that empty
+    string at import time and raises ``ValueError``, which takes CustomTkinter
+    — and therefore the whole UI — down with it.
+
+    The replacement resolves the version once via ``sw_vers`` and returns it
+    directly.  It deliberately does **not** delegate to the original: that
+    call is exactly what fails, and re-attempting it on every invocation would
+    either raise through the expat stub or re-read and re-parse a file whose
+    answer cannot change.
+
     Returns:
         True if the patch was applied, False if it was unnecessary.
     """
     if sys.platform != "darwin":
         return False
 
-    current = platform.mac_ver()
+    try:
+        current = platform.mac_ver()
+    except Exception:
+        # A stubbed expat makes the underlying plist parse raise outright.
+        current = ("", ("", "", ""), "")
+
     if current[0]:
         return False  # Already reporting a usable version.
 
@@ -85,18 +104,85 @@ def patch_macos_version() -> bool:
         version = "26.0"
 
     machine = platform.machine()
-    original = platform.mac_ver
+    resolved: Tuple[str, Tuple[str, str, str], str] = (version, ("", "", ""), machine)
 
     def mac_ver(release: str = "", versioninfo: Tuple[str, str, str] = ("", "", ""),
                 machine_: str = "") -> Tuple[str, Tuple[str, str, str], str]:
         """Patched ``platform.mac_ver`` returning a non-empty version."""
-        result = original(release, versioninfo, machine_)
-        if result[0]:
-            return result
-        return (version, ("", "", ""), machine)
+        return resolved
 
     platform.mac_ver = mac_ver  # type: ignore[assignment]
     return True
+
+
+def _pyexpat_is_broken() -> bool:
+    """Return True if ``pyexpat`` exists but fails to load."""
+    if "pyexpat" in sys.modules:
+        return False
+    try:
+        import pyexpat  # noqa: F401
+
+        return False
+    except ImportError:
+        # A missing-symbol dlopen failure surfaces as ImportError, same as a
+        # genuinely absent module; either way the stub is the right response.
+        return True
+    except Exception:
+        return True
+
+
+class BrokenPyexpatError(RuntimeError):
+    """Raised when this interpreter's ``pyexpat`` extension cannot load."""
+
+
+_EXPAT_HELP = """\
+This Python installation has a broken 'pyexpat' extension.
+
+  Cause:  pyexpat is linked against /usr/lib/libexpat.1.dylib, but that
+          system library does not export the symbol it needs
+          (_XML_SetAllocTrackerActivationThreshold). This affects every
+          Homebrew Python on recent macOS, not just this project.
+
+  Impact: MediaPipe cannot be imported at all, because its import chain
+          reaches XML parsing:
+            mediapipe -> tasks.vision -> drawing_utils -> matplotlib
+                      -> font_manager -> plistlib -> pyexpat
+          CustomTkinter is affected too, via darkdetect reading the macOS
+          version from a plist.
+
+  Fix:    Run the bundled repair script, then start the app again:
+
+            brew install expat
+            python scripts/fix_macos_expat.py
+
+          It builds a corrected copy of the extension inside your virtual
+          environment. It does not modify Homebrew or system files.
+"""
+
+
+def check_pyexpat(raise_on_error: bool = False) -> bool:
+    """Report whether XML parsing works in this interpreter.
+
+    An earlier version of this module tried to *stub out* expat, on the
+    reasoning that this project never parses XML.  That was wrong: the C
+    extension ``_elementtree`` requires the real ``pyexpat.expat_CAPI``
+    capsule, which a Python stub cannot provide, so pyobjc and anything else
+    importing ``xml.etree`` still failed.  A partial workaround that moves the
+    crash somewhere less obvious is worse than none, so the shim was removed
+    in favour of detecting the problem and explaining the fix.
+
+    Args:
+        raise_on_error: Raise :class:`BrokenPyexpatError` instead of
+            returning ``False``.
+
+    Returns:
+        True if expat is usable.
+    """
+    if not _pyexpat_is_broken():
+        return True
+    if raise_on_error:
+        raise BrokenPyexpatError(_EXPAT_HELP)
+    return False
 
 
 def apply_all() -> None:

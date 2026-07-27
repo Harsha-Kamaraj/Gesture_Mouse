@@ -1,0 +1,93 @@
+{
+  "profile_name": "Default",
+  "description": "Balanced defaults suitable for everyday desktop use.",
+  "camera": {
+    "device_index": 0,
+    "width": 1280,
+    "height": 720,
+    "target_fps": 30,
+    "mirror": true,
+    "inference_scale": 0.6,
+    "stall_timeout": 3.0,
+    "backend": "auto"
+  },
+  "detection": {
+    "max_num_hands": 2,
+    "model_complexity": 1,
+    "min_detection_confidence": 0.6,
+    "min_tracking_confidence": 0.5,
+    "primary_hand": "Right",
+    "auto_hand_dominance": true
+  },
+  "cursor": {
+    "sensitivity": 1.0,
+    "speed": 1.0,
+    "smoothing": 0.55,
+    "dead_zone": 0.004,
+    "prediction_time": 0.035,
+    "active_region_margin": 0.16,
+    "precision_factor": 0.28,
+    "scroll_speed": 3.0,
+    "natural_scroll": false,
+    "multi_monitor": true,
+    "target_monitor": -1,
+    "one_euro_min_cutoff": 1.2,
+    "one_euro_beta": 0.012
+  },
+  "gestures": {
+    "min_confidence": 0.72,
+    "stability_frames": 3,
+    "global_cooldown": 0.28,
+    "pinch_threshold": 0.055,
+    "pinch_release_threshold": 0.085,
+    "drag_hold_time": 0.45,
+    "double_click_interval": 0.42,
+    "motion_history_length": 64,
+    "dynamic_min_score": 0.8,
+    "dynamic_min_path": 0.65,
+    "tracking_lost_timeout": 0.8,
+    "overrides": {},
+    "bindings": {}
+  },
+  "ui": {
+    "theme": "dark",
+    "accent": "#7C5CFF",
+    "ui_scale": 1.0,
+    "show_landmarks": true,
+    "show_skeleton": true,
+    "show_fps": true,
+    "show_confidence": true,
+    "show_overlay_panel": true,
+    "high_contrast": false,
+    "large_text": false,
+    "start_minimized": false,
+    "always_on_top": false,
+    "window_width": 1360,
+    "window_height": 820
+  },
+  "features": {
+    "voice_commands": false,
+    "sound_effects": true,
+    "toast_notifications": true,
+    "voice_feedback": false,
+    "left_handed_mode": false,
+    "face_unlock": false,
+    "auto_lock_seconds": 0,
+    "idle_timeout": 300,
+    "plugins_enabled": true,
+    "analytics": true,
+    "whiteboard_enabled": true,
+    "presentation_enabled": true
+  },
+  "hotkeys": {
+    "emergency_stop": "<ctrl>+<alt>+q",
+    "toggle_tracking": "<ctrl>+<alt>+space",
+    "toggle_precision": "<ctrl>+<alt>+p",
+    "screenshot": "<ctrl>+<alt>+s",
+    "toggle_whiteboard": "<ctrl>+<alt>+w",
+    "toggle_presentation": "<ctrl>+<alt>+d",
+    "recenter": "<ctrl>+<alt>+c"
+  },
+  "calibration": null,
+  "schema_version": 1
+}

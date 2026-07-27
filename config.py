@@ -16,6 +16,11 @@ that the settings UI can be generated almost mechanically from it.
 
 from __future__ import annotations
 
+# Environment shims must run before MediaPipe, matplotlib or CustomTkinter are
+# imported anywhere.  ``config`` is the module every other module depends on,
+# which makes it the one place that reliably comes first.  See compat.py.
+import compat  # noqa: F401
+
 import dataclasses
 import json
 import os

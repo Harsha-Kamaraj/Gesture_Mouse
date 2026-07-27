@@ -254,7 +254,10 @@ class PresenceMonitor:
         self.on_present = on_present
         self.on_lock = on_lock
 
-        self.detector = FaceDetector(self.config.min_face_fraction)
+        # Built lazily: constructing a FaceDetector loads a TFLite model and
+        # spins up an XNNPACK delegate, which is pure waste when presence
+        # detection is switched off (the default).
+        self._detector: Optional[FaceDetector] = None
         self.status = PresenceStatus()
 
         self._frame: Optional[np.ndarray] = None
@@ -262,6 +265,13 @@ class PresenceMonitor:
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._locked_at = 0.0
+
+    @property
+    def detector(self) -> FaceDetector:
+        """The face detector, constructed on first use."""
+        if self._detector is None:
+            self._detector = FaceDetector(self.config.min_face_fraction)
+        return self._detector
 
     @property
     def available(self) -> bool:
