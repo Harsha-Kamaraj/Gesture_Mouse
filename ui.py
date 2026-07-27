@@ -66,6 +66,7 @@ class AppServices:
     list_profiles: Optional[Callable[[], List[str]]] = None
     create_profile: Optional[Callable[[str], None]] = None
     delete_profile: Optional[Callable[[str], None]] = None
+    duplicate_profile: Optional[Callable[[str], None]] = None
     export_profile: Optional[Callable[[str, Path], None]] = None
     import_profile: Optional[Callable[[Path], None]] = None
     list_gestures: Optional[Callable[[], List[Dict[str, object]]]] = None
@@ -74,6 +75,9 @@ class AppServices:
     toggle_gesture: Optional[Callable[[str, bool], None]] = None
     record_gesture: Optional[Callable[[str], None]] = None
     delete_gesture: Optional[Callable[[str], None]] = None
+    duplicate_gesture: Optional[Callable[[str], None]] = None
+    export_gestures: Optional[Callable[[Path], int]] = None
+    import_gestures: Optional[Callable[[Path], int]] = None
     export_history: Optional[Callable[[Path], int]] = None
     clear_history: Optional[Callable[[], None]] = None
     on_close: Optional[Callable[[], None]] = None
@@ -349,6 +353,20 @@ class MainWindow(ctk.CTk):
             font=_font(theme, 11), text_color=theme.text_muted,
         ).pack(side="left")
 
+        ctk.CTkButton(
+            toolbar, text="Import", height=36, width=90, font=_font(theme, 12),
+            fg_color=theme.surface_alt, hover_color=theme.border,
+            text_color=theme.text, corner_radius=theme.corner_radius - 4,
+            command=self._import_gestures,
+        ).pack(side="right")
+
+        ctk.CTkButton(
+            toolbar, text="Export", height=36, width=90, font=_font(theme, 12),
+            fg_color=theme.surface_alt, hover_color=theme.border,
+            text_color=theme.text, corner_radius=theme.corner_radius - 4,
+            command=self._export_gestures,
+        ).pack(side="right", padx=8)
+
         self._widgets["gesture_list"] = ctk.CTkScrollableFrame(
             frame, fg_color=theme.surface, corner_radius=theme.corner_radius,
             border_width=1, border_color=theme.border)
@@ -420,6 +438,12 @@ class MainWindow(ctk.CTk):
                       hover_color=theme.accent_hover,
                       corner_radius=theme.corner_radius - 4,
                       command=self._create_profile).pack(side="left", padx=10)
+
+        ctk.CTkButton(toolbar, text="Import", height=36, width=90,
+                      font=_font(theme, 12), fg_color=theme.surface_alt,
+                      hover_color=theme.border, text_color=theme.text,
+                      corner_radius=theme.corner_radius - 4,
+                      command=self._import_profile).pack(side="right")
 
         self._widgets["profile_list"] = ctk.CTkScrollableFrame(
             frame, fg_color=theme.surface, corner_radius=theme.corner_radius,
@@ -796,6 +820,13 @@ class MainWindow(ctk.CTk):
                     border_width=1, border_color=theme.border,
                     command=lambda n=name: self._delete_gesture(n),
                 ).pack(side="right", padx=(6, 12))
+                ctk.CTkButton(
+                    row, text="Duplicate", width=84, height=28,
+                    font=_font(theme, 11), fg_color="transparent",
+                    hover_color=theme.surface, text_color=theme.text_muted,
+                    border_width=1, border_color=theme.border,
+                    command=lambda n=name: self._duplicate_gesture(n),
+                ).pack(side="right")
 
             current = actions.get(str(gesture.get("action", "none")), "Do Nothing")
             menu = ctk.CTkOptionMenu(
@@ -854,6 +885,23 @@ class MainWindow(ctk.CTk):
                     border_width=1, border_color=theme.border,
                     command=lambda n=name: self._delete_profile(n),
                 ).pack(side="right", pady=10)
+
+            # Duplicate and export stay available for the active profile too:
+            # duplicating the profile you are tuning is the common case.
+            ctk.CTkButton(
+                row, text="Export", width=76, height=30,
+                font=_font(theme, 11), fg_color="transparent",
+                hover_color=theme.surface, text_color=theme.text_muted,
+                border_width=1, border_color=theme.border,
+                command=lambda n=name: self._export_profile(n),
+            ).pack(side="right", padx=6, pady=10)
+            ctk.CTkButton(
+                row, text="Duplicate", width=88, height=30,
+                font=_font(theme, 11), fg_color="transparent",
+                hover_color=theme.surface, text_color=theme.text_muted,
+                border_width=1, border_color=theme.border,
+                command=lambda n=name: self._duplicate_profile(n),
+            ).pack(side="right", pady=10)
 
     def refresh_history_list(self) -> None:
         """Rebuild the history rows from the newest entries."""
@@ -1080,6 +1128,35 @@ class MainWindow(ctk.CTk):
         self._call("delete_profile", name)
         self.refresh_profile_list()
 
+    def _duplicate_profile(self, name: str) -> None:
+        """Copy a profile under a new name."""
+        self._call("duplicate_profile", name)
+        self.refresh_profile_list()
+        self.toasts.notify("Profile duplicated", name, "success")
+
+    def _export_profile(self, name: str) -> None:
+        """Write a profile to a JSON file via a save dialog."""
+        from tkinter import filedialog
+
+        path = filedialog.asksaveasfilename(
+            defaultextension=".json", filetypes=[("JSON", "*.json")],
+            initialfile=f"{name.lower().replace(' ', '-')}.json")
+        if not path:
+            return
+        self._call("export_profile", name, Path(path))
+        self.toasts.notify("Profile exported", Path(path).name, "success")
+
+    def _import_profile(self) -> None:
+        """Load a profile from a JSON file via an open dialog."""
+        from tkinter import filedialog
+
+        path = filedialog.askopenfilename(filetypes=[("JSON", "*.json")])
+        if not path:
+            return
+        self._call("import_profile", Path(path))
+        self.refresh_profile_list()
+        self.toasts.notify("Profile imported", Path(path).name, "success")
+
     def _record_gesture(self) -> None:
         """Start recording a custom gesture."""
         entry = self._widgets.get("record_name")
@@ -1095,6 +1172,35 @@ class MainWindow(ctk.CTk):
         """Delete a custom gesture."""
         self._call("delete_gesture", name)
         self.refresh_gesture_list()
+
+    def _duplicate_gesture(self, name: str) -> None:
+        """Copy a custom gesture, so it can be retuned without losing the original."""
+        self._call("duplicate_gesture", name)
+        self.refresh_gesture_list()
+        self.toasts.notify("Gesture duplicated", name, "success")
+
+    def _export_gestures(self) -> None:
+        """Write the custom gesture library to a shareable JSON file."""
+        from tkinter import filedialog
+
+        path = filedialog.asksaveasfilename(
+            defaultextension=".json", filetypes=[("JSON", "*.json")],
+            initialfile="custom_gestures.json")
+        if not path:
+            return
+        count = self._call("export_gestures", Path(path))
+        self.toasts.notify("Gestures exported", f"{count or 0} gestures", "success")
+
+    def _import_gestures(self) -> None:
+        """Merge a gesture library file into the current one."""
+        from tkinter import filedialog
+
+        path = filedialog.askopenfilename(filetypes=[("JSON", "*.json")])
+        if not path:
+            return
+        count = self._call("import_gestures", Path(path))
+        self.refresh_gesture_list()
+        self.toasts.notify("Gestures imported", f"{count or 0} gestures", "success")
 
     def _bind_gesture(self, name: str, action_id: str) -> None:
         """Rebind a gesture to a different action."""
