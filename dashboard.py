@@ -294,34 +294,59 @@ class BarChart:
                                     bg=theme.surface, highlightthickness=0, bd=0)
         self.canvas.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
-    def set_data(self, data: Sequence[Tuple[str, int]]) -> None:
-        """Render ``(label, count)`` pairs, highest first."""
+    def set_data(self, data: Sequence[Tuple[str, int]],
+                 scale_max: Optional[int] = None, suffix: str = "",
+                 empty_text: str = "No gestures yet",
+                 colour_by_value: bool = False) -> None:
+        """Render ``(label, value)`` pairs, highest first.
+
+        Args:
+            data: Label/value pairs, already sorted.
+            scale_max: Fixed upper bound for bar width.  Counts should scale
+                to the largest value present, but a *rate* must not: with
+                peak-relative scaling the best gesture always fills the bar,
+                so 95% and 60% look identical.  Pass 100 for percentages.
+            suffix: Appended to the printed value, e.g. ``"%"``.
+            empty_text: Shown when there is no data.
+            colour_by_value: Tint bars red/amber/green by value.  Only
+                meaningful alongside ``scale_max``.
+        """
         canvas = self.canvas
         canvas.delete("all")
         width = canvas.winfo_width() or 380
 
         if not data:
-            canvas.create_text(width / 2, 30, text="No gestures yet",
+            canvas.create_text(width / 2, 30, text=empty_text,
                                fill=self.theme.text_muted,
                                font=_font(self.theme, 10))
             return
 
-        peak = max(count for _, count in data) or 1
+        peak = scale_max or (max(value for _, value in data) or 1)
         label_w = 118
         bar_area = max(width - label_w - 46, 40)
 
-        for index, (label, count) in enumerate(data[:self.rows]):
+        for index, (label, value) in enumerate(data[:self.rows]):
             y = 14 + index * 26
             display = label if len(label) <= 16 else label[:15] + "…"
             canvas.create_text(6, y, text=display, anchor="w",
                                fill=self.theme.text_muted,
                                font=_font(self.theme, 10))
 
-            bar_w = max(3, int(bar_area * count / peak))
+            fraction = clamp(value / peak, 0.0, 1.0)
+            if colour_by_value:
+                ratio = value / peak
+                colour = (self.theme.success if ratio >= 0.85
+                          else self.theme.warning if ratio >= 0.7
+                          else self.theme.error)
+            else:
+                colour = self.theme.accent
+
+            bar_w = max(3, int(bar_area * fraction))
             canvas.create_rectangle(label_w, y - 7, label_w + bar_w, y + 7,
-                                    fill=self.theme.accent, outline="")
-            canvas.create_text(label_w + bar_w + 8, y, text=str(count), anchor="w",
-                               fill=self.theme.text, font=_font(self.theme, 10, "bold"))
+                                    fill=colour, outline="")
+            canvas.create_text(label_w + bar_w + 8, y, text=f"{value}{suffix}",
+                               anchor="w", fill=self.theme.text,
+                               font=_font(self.theme, 10, "bold"))
 
     def pack(self, **kwargs: object) -> "BarChart":
         """Pack the frame and return self."""
