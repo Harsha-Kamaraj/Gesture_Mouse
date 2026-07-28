@@ -380,6 +380,10 @@ class CameraStream:
         self.actual_width: int = 0
         self.actual_height: int = 0
         self.read_failures: int = 0
+        #: Seconds to pace the reader at; 0 means free-run at the device rate.
+        #: Raised by the pipeline while no hand is being tracked, so an idle
+        #: application stops decoding frames nothing will look at.
+        self.idle_interval: float = 0.0
 
     # -- lifecycle -------------------------------------------------------- #
 
@@ -430,8 +434,16 @@ class CameraStream:
         )
 
     def _reader(self) -> None:
-        """Reader loop: pull frames as fast as the device allows."""
+        """Reader loop: pull frames as fast as the device allows.
+
+        When :attr:`idle_interval` is set the loop paces itself instead.
+        Decoding a frame and converting its colour space is not free — it
+        measured as the single most expensive stage of the whole pipeline —
+        so capturing at 30 fps to feed a consumer that is only sampling at 8
+        is most of a CPU core spent on frames nobody looks at.
+        """
         while self._running.is_set() and self._capture is not None:
+            started = time.monotonic()
             ok, frame = self._capture.read()
             if not ok or frame is None:
                 self.read_failures += 1
@@ -448,6 +460,12 @@ class CameraStream:
                 self._frame_time = time.monotonic()
                 self._frame_index += 1
                 self._new_frame.notify_all()
+
+            interval = self.idle_interval
+            if interval > 0.0:
+                remaining = interval - (time.monotonic() - started)
+                if remaining > 0:
+                    time.sleep(remaining)
 
     def read(self) -> Tuple[Optional[np.ndarray], float, int]:
         """Return ``(frame_copy, timestamp, index)`` for the newest frame."""

@@ -94,14 +94,18 @@ class CameraConfig:
     """Video capture parameters."""
 
     device_index: int = 0
-    width: int = 1280
-    height: int = 720
+    # 640x480 rather than 720p: capture plus the BGR->RGB conversion measured
+    # 45% of a CPU core at 1280x720 against 25% here, which made raw capture
+    # more expensive than the hand tracking it feeds. MediaPipe downscales for
+    # inference regardless, so the larger frame bought nothing but heat.
+    width: int = 640
+    height: int = 480
     target_fps: int = 30
     #: Mirror the frame so that moving your hand right moves the cursor right.
     mirror: bool = True
     #: Downscale factor applied *before* inference.  Values below 1.0 trade a
     #: little accuracy for a large latency win on CPU-only machines.
-    inference_scale: float = 0.6
+    inference_scale: float = 0.75
     #: Seconds without a decoded frame before the camera is considered lost.
     stall_timeout: float = 3.0
     #: Backend hint; "auto" lets OpenCV choose.
@@ -121,6 +125,14 @@ class DetectionConfig:
     primary_hand: str = "Right"
     #: When True the primary hand is chosen automatically from usage stats.
     auto_hand_dominance: bool = True
+    #: Frames per second to run inference at once no hand has been seen for
+    #: ``idle_timeout`` seconds.  Hand tracking is by far the most expensive
+    #: stage, and running it at full rate against an empty frame burns a CPU
+    #: core to learn nothing.  A hand entering the frame is picked up within
+    #: one idle frame, after which full rate resumes immediately.
+    idle_fps: float = 8.0
+    #: Seconds without a detected hand before dropping to ``idle_fps``.
+    idle_timeout: float = 2.5
 
 
 @dataclass

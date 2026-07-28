@@ -102,6 +102,8 @@ class ScriptedDetector:
             is_stalled = False
             actual_width = width
             actual_height = height
+            # Mirrors CameraStream: the pipeline paces capture through this.
+            idle_interval = 0.0
 
             def close(self) -> None:
                 """No-op."""

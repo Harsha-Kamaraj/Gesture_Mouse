@@ -81,6 +81,9 @@ class SharedState:
     camera_error: str = ""
     level: Optional[Tuple[str, float]] = None
     level_until: float = 0.0
+    #: Incremented each time a new annotated frame is published, so the UI can
+    #: tell a fresh frame from one it has already drawn.
+    frame_serial: int = 0
 
 
 class GestureMouseApp:
@@ -152,6 +155,11 @@ class GestureMouseApp:
         self.window: Any = None
         self._hotkey_listener: Any = None
         self._saved_gesture_cfg: Dict[str, float] = {}
+        # Drives idle throttling; assume a hand at startup so the
+        # first seconds run at full rate while the user gets ready.
+        self._last_hand_at = time.monotonic()
+        #: Serial of the last frame handed to the UI, to skip repeats.
+        self._served_frame_serial = -1
 
         self.profiles.subscribe(self._on_config_changed)
 
@@ -468,7 +476,56 @@ class GestureMouseApp:
             except Exception as exc:
                 log.error("frame processing failed: %s", exc, exc_info=True)
 
+            try:
+                self._idle_throttle(result, timestamp)
+            except Exception as exc:
+                # Throttling is an optimisation. A fault here must never stop
+                # the pipeline — an earlier version let one propagate and it
+                # killed the processing thread after a single frame.
+                log.error("idle throttle failed: %s", exc, exc_info=True)
+
         log.info("processing thread stopped")
+
+    def _idle_throttle(self, result: Any, timestamp: float) -> None:
+        """Sleep between frames while no hand is present.
+
+        Hand tracking dominates the pipeline cost, and an idle application
+        still saturated a core running inference against empty frames. Once no
+        hand has been seen for ``idle_timeout``, frames are processed at
+        ``idle_fps`` instead of the camera's full rate.
+
+        Responsiveness is unaffected in use: any frame containing a hand resets
+        the timer, so the first idle frame a hand appears in restores full rate.
+        The worst case is one idle frame period of extra latency when you first
+        raise your hand.
+        """
+        cfg = self.config.detection
+        stream = getattr(self.detector, "stream", None)
+
+        if getattr(result, "hands", None):
+            self._last_hand_at = timestamp
+            if getattr(stream, "idle_interval", 0.0):
+                stream.idle_interval = 0.0   # back to full rate immediately
+            return
+
+        idle_timeout = getattr(cfg, "idle_timeout", 2.5)
+        idle_fps = getattr(cfg, "idle_fps", 8.0)
+        if idle_fps <= 0 or timestamp - self._last_hand_at < idle_timeout:
+            return
+
+        # Pace the camera thread too. Decoding and colour-converting a frame is
+        # the single most expensive stage, so leaving capture at 30fps while
+        # inference samples at idle_fps would keep most of the cost.
+        if stream is not None and hasattr(stream, "idle_interval"):
+            stream.idle_interval = 1.0 / idle_fps
+
+        # Sleep only for the remainder of the idle frame budget, so this never
+        # adds delay on top of an already-slow frame.
+        budget = 1.0 / idle_fps
+        elapsed = time.monotonic() - timestamp
+        remaining = budget - elapsed
+        if remaining > 0:
+            self._stop.wait(remaining)
 
     def _process_frame(self, result: Any, timestamp: float,
                        frame_start: float) -> None:
@@ -609,15 +666,26 @@ class GestureMouseApp:
 
         with self._state_lock:
             self.state.frame = frame
+            self.state.frame_serial += 1
 
     # -- UI accessors ------------------------------------------------------ #
 
     def get_display_frame(self) -> Optional[Any]:
-        """Return the latest frame as a CTkImage for the UI."""
+        """Return the latest frame as a CTkImage, or None if unchanged.
+
+        The UI polls faster than frames are produced — and much faster once
+        idle throttling kicks in — so most calls would otherwise re-copy,
+        re-colour-convert and rebuild a CTkImage for a frame already on
+        screen. Returning None for a repeat lets the caller skip the redraw
+        entirely; it already treats None as "nothing new".
+        """
         with self._state_lock:
-            frame = None if self.state.frame is None else self.state.frame.copy()
-        if frame is None:
-            return None
+            if self.state.frame is None:
+                return None
+            if self.state.frame_serial == self._served_frame_serial:
+                return None
+            self._served_frame_serial = self.state.frame_serial
+            frame = self.state.frame.copy()
 
         try:
             import cv2

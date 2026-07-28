@@ -111,7 +111,12 @@ class MainWindow(ctk.CTk):
 
     #: UI refresh interval in milliseconds (video is refreshed separately).
     REFRESH_MS = 500
-    VIDEO_MS = 33
+    #: Preview redraw interval.  Each redraw copies the frame, converts its
+    #: colour space and builds a CTkImage, which measured as roughly half the
+    #: application's CPU use at 30fps.  The preview is a monitor, not the
+    #: control path — the cursor is driven from the pipeline at full rate
+    #: regardless — so 20fps here costs nothing that matters.
+    VIDEO_MS = 50
     #: Rows rendered in the History table.  Allocated once and reused; the
     #: full log stays available via Export CSV.
     HISTORY_ROWS = 25
