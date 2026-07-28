@@ -171,6 +171,11 @@ class GestureConfig:
     pinch_release_threshold: float = 0.085
     #: Seconds a pinch must be held before it becomes a drag rather than a click.
     drag_hold_time: float = 0.45
+    #: Seconds a pose must be held before a "hold" gesture (whiteboard,
+    #: presentation, click-hold, sleep) fires.  A resting hand often happens to
+    #: match a pose like Fist or Four Fingers, so too low a value makes those
+    #: modes toggle on their own while the user is doing something else.
+    hold_duration: float = 1.2
     #: Maximum seconds between two clicks for a double click.
     double_click_interval: float = 0.42
     #: Number of frames kept for dynamic (motion) gesture recognition.

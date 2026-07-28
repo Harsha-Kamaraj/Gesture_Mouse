@@ -727,6 +727,8 @@ class MainWindow(ctk.CTk):
                0.05, 1.5, getattr(ges, "global_cooldown", 0.28))
         slider(gestures, "gestures", "drag_hold_time", "Drag Hold (s)",
                0.15, 1.2, getattr(ges, "drag_hold_time", 0.45))
+        slider(gestures, "gestures", "hold_duration", "Mode Hold (s)",
+               0.6, 2.5, getattr(ges, "hold_duration", 1.2))
         slider(gestures, "gestures", "stability_frames", "Stability Frames",
                1, 8, getattr(ges, "stability_frames", 3), "{:.0f}")
 

@@ -530,8 +530,8 @@ class GestureEngine:
     the whole recognition path unit-testable without a desktop session.
     """
 
-    #: Seconds a mode pose must be held before a "hold" gesture fires.
-    HOLD_DURATION = 0.9
+    #: Fallback hold duration when the config predates ``hold_duration``.
+    HOLD_DURATION = 1.2
 
     def __init__(self, cfg: GestureConfig,
                  recognizer: Optional[DollarOneRecognizer] = None) -> None:
@@ -588,6 +588,16 @@ class GestureEngine:
         self.stabilizer.required_frames = max(1, cfg.stability_frames)
         self._global_cooldown.interval = cfg.global_cooldown
         self.trail.capacity = cfg.motion_history_length
+
+    @property
+    def _hold_duration(self) -> float:
+        """Seconds a pose must be held before a hold gesture fires.
+
+        Read from the live config rather than cached, so the Settings slider
+        takes effect immediately.  Falls back to the class constant for
+        configs saved before the setting existed.
+        """
+        return float(getattr(self.cfg, "hold_duration", self.HOLD_DURATION))
 
     def binding_for(self, gesture: str) -> str:
         """Resolve a gesture name to its action id, honouring user overrides."""
@@ -751,7 +761,7 @@ class GestureEngine:
         """While asleep, only the wake gesture is honoured."""
         output.mode = Mode.SLEEPING
         output.pose = pose
-        if pose == Pose.OPEN_PALM and (timestamp - self._pose_entered_at) >= self.HOLD_DURATION:
+        if pose == Pose.OPEN_PALM and (timestamp - self._pose_entered_at) >= self._hold_duration:
             if not self._hold_fired:
                 self._hold_fired = True
                 self.sleeping = False
@@ -1000,7 +1010,7 @@ class GestureEngine:
             return
 
         held = timestamp - self._pose_entered_at
-        if held < self.HOLD_DURATION:
+        if held < self._hold_duration:
             return
 
         hold_gestures = {
