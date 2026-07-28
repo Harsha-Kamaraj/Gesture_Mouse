@@ -219,7 +219,7 @@ refinement afterwards.
 |---|---|
 | `Ctrl+Alt+Q` | Emergency stop — releases all input, disables the cursor |
 | `Ctrl+Alt+Space` | Pause / resume tracking |
-| 🖐️ held 1 s | Sleep tracking (gesture equivalent) |
+| 🖐️ held | Sleep tracking (gesture equivalent) |
 
 Automatic protections:
 

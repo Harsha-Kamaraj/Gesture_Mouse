@@ -243,9 +243,9 @@ This is how the gesture set stays small while covering many controls.
 
 | Gesture | Action |
 |---|---|
-| 🖐️ Open palm held 1 s | Sleep / wake tracking |
-| 👌 OK sign held 1 s | Screenshot |
-| 🤙 Thumb + pinky held 1 s | Start / stop screen recording |
+| 🖐️ Open palm held | Sleep / wake tracking |
+| 👌 OK sign held | Screenshot |
+| 🤙 Thumb + pinky held | Start / stop screen recording |
 | Pinky only, held | Toggle whiteboard |
 | Four fingers, thumb tucked | Toggle presentation mode |
 | Swipe ← / → | Browser back / forward |
