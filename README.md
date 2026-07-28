@@ -224,7 +224,7 @@ python app.py --debug              # verbose logging
 | Thumb + **middle** finger touch | Right click |
 | Thumb + **ring** finger touch | Middle click |
 | 🤏 Pinch and hold ~0.45 s, then move | Drag — release to drop |
-| ✊ Fist held 1 s | Toggle click-and-hold |
+| ✊ Fist held | *Unbound by default* (see docs/GESTURES.md) |
 
 ### Modes
 

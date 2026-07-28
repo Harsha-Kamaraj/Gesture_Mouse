@@ -104,9 +104,16 @@ Poses held for ~0.9 s. Each fires once per hold, not repeatedly.
 | Call me 🤙 | `call_hold` | Start / stop screen recording |
 | Pinky | `pinky_hold` | Toggle whiteboard |
 | Four fingers | `four_hold` | Toggle presentation mode |
-| Fist | `fist_hold` | Toggle click-and-hold |
+| Fist | `fist_hold` | *Unbound by default* |
 
 ---
+
+> **Why the fist is unbound.** A relaxed or transitioning hand reads as a fist
+> more readily than any other pose, and the obvious binding for it —
+> `hold_click` — *latches* the left button, so one accidental fire leaves the
+> button held until something toggles it back. Pinch-and-hold already covers
+> press-and-hold and is self-limiting, since releasing the pinch releases the
+> button. Bind `hold_click` to the fist in **Gestures** if you want it.
 
 ## Swipes
 

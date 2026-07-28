@@ -491,7 +491,16 @@ DEFAULT_BINDINGS: Dict[str, str] = {
     "pinch_ring": "middle_click",
     "drag_start": "drag_start",
     "drag_end": "drag_end",
-    "fist_hold": "hold_click",
+    # Deliberately unbound.  A relaxed or transitioning hand reads as a fist
+    # more than any other pose, and "hold_click" *latches* the left button, so
+    # an accidental fire leaves the button down until something toggles it
+    # back — selecting text and dragging files in the meantime.  Session logs
+    # showed this firing 6 times in 2 minutes of ordinary use.
+    #
+    # Nothing is lost: pinch-and-hold already gives press-and-hold, and it is
+    # self-limiting because releasing the pinch releases the button. Users who
+    # want the latching behaviour can bind it in the Gestures view.
+    "fist_hold": "none",
     "ok_sign": "screenshot",
     "call_hold": "toggle_recording",
     "pinky_hold": "toggle_whiteboard",
