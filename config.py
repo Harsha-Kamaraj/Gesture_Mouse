@@ -233,7 +233,8 @@ class HotkeyConfig:
     """Global keyboard shortcuts.  Values use ``pynput``-style notation."""
 
     emergency_stop: str = "<ctrl>+<alt>+q"
-    toggle_tracking: str = "<ctrl>+<alt>+space"
+    # Named keys must be bracketed; a bare "space" fails to parse.
+    toggle_tracking: str = "<ctrl>+<alt>+<space>"
     toggle_precision: str = "<ctrl>+<alt>+p"
     screenshot: str = "<ctrl>+<alt>+s"
     toggle_whiteboard: str = "<ctrl>+<alt>+w"

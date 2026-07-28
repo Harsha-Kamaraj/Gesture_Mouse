@@ -379,10 +379,30 @@ class GestureMouseApp:
                 hotkeys.toggle_presentation: self._toggle_presentation,
                 hotkeys.recenter: self.cursor.recenter,
             }
-            self._hotkey_listener = keyboard.GlobalHotKeys(
-                {combo: handler for combo, handler in mapping.items() if combo})
+
+            # GlobalHotKeys parses every combination up front and raises on the
+            # first bad one, which would discard the whole set — including the
+            # emergency stop. Since these are user-editable, one typo in an
+            # unrelated shortcut must not cost the safety escape hatch, so each
+            # is validated individually and bad ones are dropped with a warning.
+            valid: Dict[str, Any] = {}
+            for combo, handler in mapping.items():
+                if not combo:
+                    continue
+                try:
+                    keyboard.HotKey.parse(combo)
+                except Exception as exc:
+                    log.warning("ignoring invalid hotkey %r: %s", combo, exc)
+                    continue
+                valid[combo] = handler
+
+            if not valid:
+                log.warning("no valid hotkeys to register")
+                return
+
+            self._hotkey_listener = keyboard.GlobalHotKeys(valid)
             self._hotkey_listener.start()
-            log.info("global hotkeys registered")
+            log.info("global hotkeys registered: %s", ", ".join(sorted(valid)))
         except Exception as exc:
             # On macOS this needs Accessibility permission, which the user may
             # not have granted; the app is fully usable without it.
