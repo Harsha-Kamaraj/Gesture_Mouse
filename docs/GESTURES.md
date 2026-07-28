@@ -14,7 +14,7 @@ The twelve shapes the classifier recognises. `POSE_LIBRARY` in
 | Pose | Pattern | Meaning |
 |---|---|---|
 | Open Palm | `1 1 1 1 1` | Neutral / sleep / wake |
-| Fist | `0 0 0 0 0` | Grab and hold |
+| Fist | `0 0 0 0 0` | *Unbound by default* |
 | Point | `0 1 0 0 0` | Move the cursor · draw shapes |
 | Peace | `0 1 1 0 0` | Enter **Scroll** mode |
 | Three Fingers | `0 1 1 1 0` | Enter **Brightness** mode |
@@ -82,7 +82,7 @@ fast.
 | **Brightness** | Three fingers | Thumb↔index distance → level | Pose changes |
 | **Drag** | Held pinch | Palm centre → cursor | Pinch released |
 | **Zoom** | Both hands pinching | Hand separation → zoom | Either releases |
-| **Sleeping** | Open palm held 1 s | *(nothing)* | Fresh open-palm hold |
+| **Sleeping** | Open palm held | *(nothing)* | Fresh open-palm hold |
 
 During a drag the cursor source switches from the index tip to the **palm
 centre**. The fingers are curled while dragging, which degrades fingertip
@@ -95,7 +95,8 @@ that put the engine to sleep would wake it one hold-duration later.
 
 ## Holds
 
-Poses held for ~0.9 s. Each fires once per hold, not repeatedly.
+Poses held for ~1.2 s (**Settings → Gestures → Mode Hold**). Each fires once
+per hold, not repeatedly.
 
 | Pose | Gesture id | Default action |
 |---|---|---|
@@ -191,6 +192,7 @@ All under **Settings**, all per-profile.
 | Cursor lags | `smoothing` ↓, `prediction_time` | ↑ |
 | Too much arm movement | `active_region_margin` ↑ or `sensitivity` | ↑ |
 | Gestures fire repeatedly | `global_cooldown` | ↑ |
+| Modes toggle on their own | `hold_duration` (Mode Hold) | ↑ |
 | Shapes not recognised | `dynamic_min_score` | ↓ |
 
 **Run the calibration wizard first.** It measures your hand, pinch range, reach
